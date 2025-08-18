@@ -3,16 +3,14 @@ import numpy as np # type: ignore
 import pandas as pd
 
 class MiniBatchSampler():
-    """Efficient mini-batch sampler for large CSV files using reservoir sampling.
+    """ Mini-batch sampler for large CSV files using reservoir sampling.
 
-    This class provides memory-efficient sampling from large CSV files by implementing
+    This class provides sampling from large CSV files by implementing
     a two-phase sampling strategy:
     1. Initial sampling using reservoir sampling to get a representative sample
        while counting total lines in a single pass
     2. Subsequent sampling using direct access with known line count
 
-    The implementation is specifically designed for large datasets that don't fit
-    in memory, using constant memory regardless of input file size.
 
     Attributes:
         columns (pd.Index | None): Column names from CSV header.
@@ -55,7 +53,10 @@ class MiniBatchSampler():
             indices: List of line indices (0-based) to exclude from sampling.
                    These indices correspond to data lines, not counting the header.
         """
-        self.excluded_indices = set(indices)
+        if self.excluded_indices:
+            self.excluded_indices.update(indices)
+        else:
+            self.excluded_indices = set(indices)
 
 
     def init_df(self, data: list[list[str]]):
