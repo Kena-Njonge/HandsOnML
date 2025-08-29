@@ -1,9 +1,15 @@
 import hashlib
-from typing import Generator, Callable
+from typing import Generator, Callable, Deque
+from collections import deque
 
 
 class BaseTokenizer:
-    """Base class for all tokenizers."""
+    """Base class for all tokenizers.
+
+    I wrote it as an implemetation excercise, sklearn provides good enough implementations
+    of this though, so my implementation was jsut devloving into a clone of that, as
+    I don't like wasting time, I will differ my implementation.
+    """
 
     def tokenize(self, text: str) -> Generator[str, None, None]:
         """Tokenize the input text and yield tokens."""
@@ -16,15 +22,11 @@ class SimpleTokenizer(BaseTokenizer):
     """
 
     def __init__(
-        self,
-        window_size: int = 1000,
-        delimiter: str = ".",
-        max_split: int = -1,
+        self, window_size: int = 1000, delimiter: str = ".", stop_words: list[str] = []
     ):
         """Initialize the SimpleTokenizer with window size, delimiter, and max split options."""
-        self.window_size = window_size
-        self.delimiter = delimiter
-        self.max_split = max_split
+        self.window_size: int = window_size
+        self.delimiter: str = delimiter
 
     def tokenize(self, text: str) -> Generator[str, None, None]:
         """
@@ -32,8 +34,8 @@ class SimpleTokenizer(BaseTokenizer):
         This was originally the _token_genenrator method.
         """
         for i in range(0, len(text), self.window_size):
-            window = text[i : i + self.window_size].casefold()
-            for token in window.split(self.delimiter, self.max_split):
+            window = text[i : i + self.window_size]
+            for token in window.split(self.delimiter):
                 yield token
 
 
@@ -46,11 +48,10 @@ class HashTokenizer(SimpleTokenizer):
         self,
         window_size: int = 1000,
         delimiter: str = ".",
-        max_split: int = -1,
         hash_function: str = "basic",
     ):
         """Initialize the HashTokenizer."""
-        super().__init__(window_size, delimiter, max_split)
+        super().__init__(window_size, delimiter)
         self._hash_func: Callable[[str], int]
         self.set_hash_function(hash_function)
 
@@ -80,3 +81,33 @@ class HashTokenizer(SimpleTokenizer):
         """
         for token in super().tokenize(text):
             yield str(self.hash_token(token))
+
+
+class NgramTokenizer(SimpleTokenizer):
+    def __init__(
+        self,
+        window_size: int = 1000,
+        delimiter: str = ".",
+        n_gram_range: tuple[int, int] = (1, 2),
+    ):
+        super().__init__(window_size, delimiter)
+        self.n_gram_range = n_gram_range
+
+    def tokenize(self, text: str) -> Generator[str, None, None]:
+        tokens_iter = super().tokenize(text)
+        min_n, max_n = self.n_gram_range
+        if min_n <= 0:
+            return
+
+        # Keep a buffer of max_n size
+        buffer: Deque[str] = deque(maxlen=max_n)
+
+        # Process tokens one at a time
+        for token in tokens_iter:
+            buffer.append(token)
+            # Once we have enough tokens, yield n-grams for each n in range
+            if len(buffer) >= min_n:
+                for n in range(min_n, min(len(buffer) + 1, max_n + 1)):
+                    # Get last n tokens from buffer for the n-gram
+                    n_gram = list(buffer)[-n:]
+                    yield self.delimiter.join(n_gram)

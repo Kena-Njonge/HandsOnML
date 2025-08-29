@@ -8,6 +8,10 @@ class TokenVectorizer:
     """
     This class is responsible for fitting on a dataset to learn a vocabulary
     and transforming text into numerical vectors based on that vocabulary.
+
+    I wrote it as an implemetation excercise, sklearn provides good enough implementations
+    of this though, so my implementation was jsut devloving into a clone of that, as 
+    I don't like wasting time, I will differ my implementation.
     """
 
     def __init__(self, tokenizer: BaseTokenizer, max_dims: int = 784):
@@ -16,19 +20,15 @@ class TokenVectorizer:
         self.max_dims = max_dims
         self.vector_dims: list[tuple[str, int]] = []
         self.frequencies = []
-        self.mapping: defaultdict[str, defaultdict[int, int]] = defaultdict(
-            lambda: defaultdict(int)
-        )
+        self.mapping: defaultdict[str, int] = defaultdict(int)
 
     def fit(self, dataset: list[str]):
         """Fit on the dataset by processing each string to build the vocabulary."""
         for i in dataset:
             self.fit_str(i)
 
-        # Flatten the mapping to get token counts
-        flattened_mapping = [
-            (token, sum(counts.values())) for token, counts in self.mapping.items()
-        ]
+        # The mapping now directly contains token counts, so we can get items directly.
+        flattened_mapping = list(self.mapping.items())
 
         # Sort tokens by frequency to determine the vocabulary
         self.vector_dims = sorted(flattened_mapping, key=lambda x: x[1], reverse=True)
@@ -42,9 +42,7 @@ class TokenVectorizer:
     def fit_str(self, text: str) -> None:
         """Fit the vectorizer on a single string by counting token occurrences."""
         for token in self.tokenizer.tokenize(text):
-            # The key for the inner dictionary is always 0 for SimpleTokenizer,
-            # but this structure is kept for compatibility with hashing.
-            self.mapping[token][0] += 1
+            self.mapping[token] += 1
 
     def transform(self, dataset: list[str]) -> np.ndarray:
         """Transform a dataset of strings into a numpy array of vectors."""
@@ -86,3 +84,4 @@ class TokenVectorizer:
                 text_vector.append(0)
 
         return text_vector
+    
